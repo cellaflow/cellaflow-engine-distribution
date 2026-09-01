@@ -1,0 +1,137 @@
+{{- $hasCustomerApm := .Values.telemetry.customerApm.endpoint | ne "" }}
+{{- $hasMothershipTelemetry := not .Values.telemetry.optOut }}
+{{- $telemetryEnabled := or $hasCustomerApm $hasMothershipTelemetry }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cellaflow-engine.fullname" . }}
+  labels:
+    {{- include "cellaflow-engine.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate  # Required: RocksDB holds an exclusive LOCK on the PVC.
+                    # RollingUpdate would cause the new pod to fail with
+                    # "Resource temporarily unavailable" while the old pod is still live.
+  selector:
+    matchLabels:
+      {{- include "cellaflow-engine.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "cellaflow-engine.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cellaflow-engine.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        # Ensures the /data volume is owned by appuser (UID 10001) before the engine starts.
+        # This handles upgrades from older root-based deployments, where files on the
+        # PersistentVolumeClaim may be owned by root (UID 0). Without this, RocksDB
+        # will fail to open the database with a Permission Denied error.
+        {{- if .Values.persistence.enabled }}
+        - name: volume-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 10001:10001 /data"]
+          securityContext:
+            runAsUser: 0  # Must run as root to chown files owned by root
+          volumeMounts:
+            - name: data
+              mountPath: /data
+        {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: CELLAFLOW_HOST
+              value: "0.0.0.0"
+            - name: CELLAFLOW_DB_PATH
+              value: "/data/cellaflow"
+          ports:
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+            - name: health
+              containerPort: 9090
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources.cellaflow | nindent 12 }}
+
+        {{- if $telemetryEnabled }}
+        - name: otel-collector
+          image: "{{ .Values.otelCollector.image.repository }}:{{ .Values.otelCollector.image.tag }}"
+          imagePullPolicy: {{ .Values.otelCollector.image.pullPolicy }}
+          env:
+            {{- if $hasCustomerApm }}
+            - name: CUSTOMER_API_KEY
+              {{- if .Values.telemetry.customerApm.apiKeySecretRef }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.telemetry.customerApm.apiKeySecretRef }}
+                  key: apiKey
+              {{- else }}
+              value: {{ .Values.telemetry.customerApm.apiKey | quote }}
+              {{- end }}
+            {{- end }}
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+          volumeMounts:
+            - name: otel-collector-config-vol
+              # Mount as directory (not subPath) so ConfigMap updates propagate live
+              mountPath: /etc/otelcol-contrib
+          resources:
+            {{- toYaml .Values.resources.otelCollector | nindent 12 }}
+        {{- end }}
+
+      volumes:
+        {{- if $telemetryEnabled }}
+        - name: otel-collector-config-vol
+          configMap:
+            name: {{ include "cellaflow-engine.fullname" . }}-otel-config
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "cellaflow-engine.fullname" . }}-data
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

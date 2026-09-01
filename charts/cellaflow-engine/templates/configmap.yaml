@@ -1,0 +1,82 @@
+{{- $customerEnabled := and (not .Values.telemetry.optOut | not | not) true }}
+{{- $hasCustomerApm := .Values.telemetry.customerApm.endpoint | ne "" }}
+{{- $hasMothershipTelemetry := not .Values.telemetry.optOut }}
+{{- $telemetryEnabled := or $hasCustomerApm $hasMothershipTelemetry }}
+{{- if $telemetryEnabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cellaflow-engine.fullname" . }}-otel-config
+  labels:
+    {{- include "cellaflow-engine.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+
+    processors:
+      # Circuit-breaker: must be first in every pipeline.
+      # Tuned to the k8s container limit defined in values.yaml:
+      #   resources.otelCollector.limits.memory = 256Mi
+      #   limit_mib = 220  (~86% of 256Mi, leaves 36Mi headroom before OOM kill)
+      #   spike_limit_mib = 50  (max burst above limit_mib before hard-refusing)
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 220
+        spike_limit_mib: 50
+      # Mothership pipeline: drop traces and logs, strip customer attributes
+      filter/mothership:
+        error_mode: ignore
+        traces:
+          span:
+            - 'true' # drop ALL traces
+        logs:
+          log_record:
+            - 'true' # drop ALL logs
+      attributes/strip_customer:
+        actions:
+          - key: "net.host.ip"
+            action: delete
+          - key: "net.peer.ip"
+            action: delete
+
+    exporters:
+      debug:
+        verbosity: detailed
+      {{- if $hasCustomerApm }}
+      otlp/customer:
+        endpoint: "{{ .Values.telemetry.customerApm.endpoint }}"
+        headers:
+          "api-key": "${CUSTOMER_API_KEY}"
+      {{- end }}
+      {{- if $hasMothershipTelemetry }}
+      otlp/mothership:
+        endpoint: "https://telemetry.cellaflow.com:4317"
+      {{- end }}
+
+    service:
+      pipelines:
+        {{- if $hasCustomerApm }}
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter]
+          exporters: [otlp/customer]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter]
+          exporters: [otlp/customer]
+        metrics/customer:
+          receivers: [otlp]
+          processors: [memory_limiter]
+          exporters: [otlp/customer, debug]
+        {{- end }}
+        {{- if $hasMothershipTelemetry }}
+        metrics/mothership:
+          receivers: [otlp]
+          processors: [memory_limiter, filter/mothership, attributes/strip_customer]
+          exporters: [otlp/mothership]
+        {{- end }}
+{{- end }}
