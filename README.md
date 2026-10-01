@@ -5,6 +5,7 @@
 [![gRPC](https://img.shields.io/badge/protocol-gRPC%20(HTTP%2F2)-green)](https://docs.cellaflow.com/api-reference)
 [![Docs](https://img.shields.io/badge/docs-docs.cellaflow.com-blue)](https://docs.cellaflow.com)
 [![PyPI SDK](https://img.shields.io/pypi/v/cellaflow?logo=pypi&label=cellaflow-sdk)](https://pypi.org/project/cellaflow/)
+[![License](https://img.shields.io/badge/license-BSL--1.1-orange)](#license)
 
 Official Docker image for **CellaFlow Engine** — a systems-grade, stateful execution runtime designed for autonomous AI agents and complex distributed workflows. Built in Rust for extreme performance, memory safety, and sub-millisecond local commit latency.
 
@@ -308,4 +309,65 @@ Images are built natively as multi-architecture container manifests:
 * **Website**: [https://cellaflow.com](https://cellaflow.com)
 * **Python SDK (PyPI)**: [https://pypi.org/project/cellaflow/](https://pypi.org/project/cellaflow/)
 * **GitHub Organization**: [https://github.com/cellaflow](https://github.com/cellaflow)
+
+---
+
+## License
+
+CellaFlow Engine is licensed under the **Business Source License 1.1**
+(`BSL-1.1`). It is source-available rather than open source.
+
+**You may run it in production, free of charge, including on infrastructure you
+rent from someone else.** Operating your own applications, workflows, or agents
+is permitted without restriction, and no licence key or registration is
+involved.
+
+The one thing the Additional Use Grant does not permit is offering CellaFlow
+Engine to third parties as a hosted, managed, or embedded service whose value
+derives substantially from its functionality. In short: run it for yourself
+freely, do not resell it as a service.
+
+| Parameter | Value |
+| :--- | :--- |
+| Licensor | CellaFlow |
+| Licensed Work | CellaFlow Engine, copyright (c) 2026 CellaFlow |
+| Change Date | 2030-09-18 |
+| Change License | Apache License, Version 2.0 |
+
+On the Change Date each version converts to Apache 2.0 automatically, so every
+release carries a fixed date on which it becomes fully open source.
+
+For alternative licensing arrangements, see
+[cellaflow.com](https://cellaflow.com).
+
+### Reading the licence from the image
+
+`LICENSE` and `NOTICE` ship inside every published image, so the terms travel
+with the artifact rather than living only in this repository:
+
+```bash
+docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:latest \
+  /usr/share/doc/cellaflow/LICENSE
+```
+
+The image also declares the licence as an OCI label, which is what scanners and
+SBOM tooling read:
+
+```bash
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}' \
+  ghcr.io/cellaflow/cellaflow:latest
+# BSL-1.1
+```
+
+### Images published on or before 2026-09-18
+
+Those builds were distributed without a stated licence, and the documentation at
+the time instructed readers to run them. To leave no doubt for anyone who
+obtained, ran, or redistributed one, **every CellaFlow Engine artifact published
+on or before 2026-09-18 is additionally made available under the Apache License,
+Version 2.0**.
+
+That grant is limited to those artifacts. Every build published after that date
+is governed solely by the Business Source License 1.1, including its Additional
+Use Grant. The full wording is in `NOTICE`, alongside `LICENSE` in the image.
 * **Issue Tracker & Support**: [support@cellaflow.com](mailto:support@cellaflow.com)
