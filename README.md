@@ -5,6 +5,7 @@
 [![gRPC](https://img.shields.io/badge/protocol-gRPC%20(HTTP%2F2)-green)](https://docs.cellaflow.com/api-reference)
 [![Docs](https://img.shields.io/badge/docs-docs.cellaflow.com-blue)](https://docs.cellaflow.com)
 [![PyPI SDK](https://img.shields.io/pypi/v/cellaflow?logo=pypi&label=cellaflow-sdk)](https://pypi.org/project/cellaflow/)
+[![npm SDK](https://img.shields.io/npm/v/@cellaflow/sdk?logo=npm&label=%40cellaflow%2Fsdk)](https://www.npmjs.com/package/@cellaflow/sdk)
 [![License](https://img.shields.io/badge/license-BSL--1.1-orange)](#license)
 
 Official Docker image for **CellaFlow Engine** — a systems-grade, stateful execution runtime designed for autonomous AI agents and complex distributed workflows. Built in Rust for extreme performance, memory safety, and sub-millisecond local commit latency.
@@ -18,12 +19,12 @@ CellaFlow manages state checkpoints using an immutable **Cognitive Graph**, prov
 ### 1. Pull the Image
 
 ```bash
-docker pull ghcr.io/cellaflow/cellaflow:latest
+docker pull ghcr.io/cellaflow/cellaflow:0.2.0
 ```
 
 ### 2. Run the Container
 
-Start the engine with persistent storage mounted to `/data`:
+Start the engine with persistent storage mounted to `/data`. The engine **requires an auth token** and refuses to start without one, because an engine without a token accepts every caller that can reach the port:
 
 ```bash
 docker run -d \
@@ -31,8 +32,11 @@ docker run -d \
   -p 50051:50051 \
   -p 9090:9090 \
   -v cellaflow-data:/data \
-  ghcr.io/cellaflow/cellaflow:latest
+  -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
+  ghcr.io/cellaflow/cellaflow:0.2.0
 ```
+
+For local development on a port nothing else can reach, you can opt out explicitly with `-e CELLAFLOW_ALLOW_UNAUTHENTICATED=true` in place of the token.
 
 ### 3. Verify Health & Readiness
 
@@ -52,6 +56,20 @@ grpcurl -plaintext localhost:50051 list
 # grpc.reflection.v1.ServerReflection
 # grpc.reflection.v1alpha.ServerReflection
 ```
+
+---
+
+## Versions
+
+Every release is published under fixed and moving tags:
+
+| Tag | Moves? | Use it for |
+| :--- | :--- | :--- |
+| `0.2.0` | Never | Production. Pin this. |
+| `0.2`, `0` | To the latest patch or minor release | Picking up fixes deliberately |
+| `latest` | With every release | Trying the engine out |
+
+Pin a full version in anything long-lived: an image under a fixed tag is never rewritten, so you always know which build, and which licence terms, you are running.
 
 ---
 
@@ -80,7 +98,8 @@ docker run -d \
   -p 50051:50051 \
   -p 9090:9090 \
   -v $(pwd)/cellaflow-data:/data \
-  ghcr.io/cellaflow/cellaflow:latest
+  -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
+  ghcr.io/cellaflow/cellaflow:0.2.0
 ```
 
 > **Important**: RocksDB requires single-process exclusive file locks. Do not attach multiple running engine containers simultaneously to the same storage path.
@@ -97,11 +116,12 @@ All settings can be customized via environment variables:
 | `CELLAFLOW_PORT` | `50051` | `50051` | gRPC service port. |
 | `CELLAFLOW_MANAGEMENT_PORT` | `9090` | `9090` | HTTP health and management probe port. |
 | `CELLAFLOW_DB_PATH` | `data/cellaflow` | `/data/cellaflow` | Path to the RocksDB state store directory. |
-| `CELLAFLOW_AUTH_TOKEN` | *None* (disabled) | *None* (disabled) | Pre-shared secret key for gRPC API authentication. |
+| `CELLAFLOW_AUTH_TOKEN` | *None* | *None* | Pre-shared secret for gRPC API authentication. **Required:** without it the engine refuses to start, unless `CELLAFLOW_ALLOW_UNAUTHENTICATED` is set. |
+| `CELLAFLOW_ALLOW_UNAUTHENTICATED` | `false` | `false` | Set to `true` to serve without a token, deliberately. For local development only: every caller that can reach the port is accepted. |
 | `CELLAFLOW_TLS_CERT` | *None* (cleartext) | *None* (cleartext) | Path to TLS certificate PEM file inside container. |
 | `CELLAFLOW_TLS_KEY` | *None* (cleartext) | *None* (cleartext) | Path to TLS private key PEM file inside container. |
 | `CELLAFLOW_LOG_LEVEL` | `info` | `info` | Structured JSON log filter (`trace`, `debug`, `info`, `warn`, `error`). |
-| `CELLAFLOW_BACKEND` | `rocksdb` | `rocksdb` | Storage backend engine (`rocksdb`, `postgres`, `dynamodb`). |
+| `CELLAFLOW_BACKEND` | `rocksdb` | `rocksdb` | Storage backend. This image provides `rocksdb`; any other value is refused at startup with a message naming what is supported. |
 | `CELLAFLOW_SYNC_WRITES` | `true` | `true` | When `true`, commits are `fsync`'d before returning (guarantees durability across host power failures). Set `false` for higher throughput if relying on OS cache. |
 | `CELLAFLOW_SESSION_IDLE_TIMEOUT_SECS` | `1800` (30m) | `1800` (30m) | Idle duration before an in-memory session actor is safely evicted from RAM. |
 | `CELLAFLOW_ACTOR_SEND_TIMEOUT_MS` | `5000` (5s) | `5000` (5s) | Mailbox backpressure timeout before returning `RESOURCE_EXHAUSTED`. |
@@ -121,7 +141,7 @@ All settings can be customized via environment variables:
 # docker-compose.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:latest
+    image: ghcr.io/cellaflow/cellaflow:0.2.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -130,14 +150,12 @@ services:
     volumes:
       - cellaflow-data:/data
     environment:
+      # Set CELLAFLOW_AUTH_TOKEN in your shell or an .env file.
+      - CELLAFLOW_AUTH_TOKEN=${CELLAFLOW_AUTH_TOKEN:?set CELLAFLOW_AUTH_TOKEN}
       - CELLAFLOW_LOG_LEVEL=info
       - CELLAFLOW_SYNC_WRITES=true
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9090/health/ready || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+    # No healthcheck needed here: the image declares its own, against
+    # /health/ready on the management port. It ships no curl or wget.
 
 volumes:
   cellaflow-data:
@@ -149,7 +167,7 @@ volumes:
 # docker-compose.prod.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:latest
+    image: ghcr.io/cellaflow/cellaflow:0.2.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -179,7 +197,7 @@ services:
 
 ## Authentication & Security
 
-When `CELLAFLOW_AUTH_TOKEN` is configured, all gRPC RPC calls must include authentication credentials. The engine validates both:
+The engine requires `CELLAFLOW_AUTH_TOKEN` and refuses to start without it (see `CELLAFLOW_ALLOW_UNAUTHENTICATED` for local development). Every gRPC call must carry the token, in either header:
 
 * **Authorization Header**: `Authorization: Bearer <token>`
 * **API Key Header**: `x-api-key: <token>`
@@ -211,24 +229,26 @@ GET http://<container-host>:9090/health/ready
 
 ### Graceful Shutdown
 
-The engine natively traps `SIGINT` and `SIGTERM` OS signals (which Kubernetes and Docker send during pod evictions, scaling down, or restarts). Upon receiving a shutdown signal, the engine will:
-1. Stop accepting new gRPC connections.
-2. Wait for active, in-flight operations and leases to conclude cleanly.
-3. Synchronously `fsync` and safely close the RocksDB state store before exiting.
+The engine traps `SIGINT` and `SIGTERM` (which Kubernetes and Docker send during pod evictions, scale-downs and restarts). On a shutdown signal it stops accepting new gRPC connections, lets in-flight requests finish, and closes the RocksDB store before exiting.
 
-This ensures **zero data loss or corruption** during standard orchestration lifecycle events, meaning it is perfectly safe to rely on Kubernetes rolling updates (`strategy: Recreate`) and standard container restart policies.
+Nothing acknowledged is lost: with `CELLAFLOW_SYNC_WRITES=true` (the default) every write is fsynced before it is acknowledged, so it survives the restart, and a client that retries after the restart gets the stored result. A step still running when the engine stopped was never acknowledged, so the client retries it after the restart. Restarts and `strategy: Recreate` deployments are safe.
 
 ---
 
 ## Connecting with Client SDKs
 
-### Python SDK Example
-
-Install the SDK:
+SDKs are available for Python and TypeScript:
 
 ```bash
-pip install cellaflow
+pip install cellaflow          # Python
+npm install @cellaflow/sdk     # TypeScript
 ```
+
+Examples for both, including multi-agent coordination, are in the [SDK repository](https://github.com/cellaflow/cellaflow-sdks).
+
+### Python SDK Example
+
+For a local run, start the engine with `-e CELLAFLOW_ALLOW_UNAUTHENTICATED=true` on a port nothing else can reach, then:
 
 Create a durable, crash-proof workflow (`agent.py`):
 
@@ -271,10 +291,16 @@ if __name__ == "__main__":
 The production Helm chart is included directly in this repository under [`charts/cellaflow-engine`](charts/cellaflow-engine):
 
 ```bash
+# A Secret you own, with a `token` key
+kubectl create secret generic cellaflow-auth --from-literal=token="$(openssl rand -hex 32)"
+
 # Install from the root of this repository
 helm install cellaflow-engine ./charts/cellaflow-engine \
+  --set auth.existingSecret=cellaflow-auth \
   --set persistence.size=20Gi
 ```
+
+The chart installs the engine version it was released with (`appVersion`), and refuses to render without one of `auth.existingSecret`, `auth.token` or `auth.allowUnauthenticated=true`.
 
 For advanced chart configuration (OpenTelemetry APM routing, Ingress, TLS, Secret references), see the [Helm Chart Documentation](charts/cellaflow-engine/README.md).
 
@@ -285,6 +311,7 @@ For advanced chart configuration (OpenTelemetry APM routing, Ingress, TLS, Secre
 You can also deploy directly using the standalone manifest provided in [`deploy/kubernetes.yaml`](deploy/kubernetes.yaml):
 
 ```bash
+kubectl create secret generic cellaflow-auth --from-literal=token="$(openssl rand -hex 32)"
 kubectl apply -f deploy/kubernetes.yaml
 ```
 
@@ -346,7 +373,7 @@ For alternative licensing arrangements, see
 with the artifact rather than living only in this repository:
 
 ```bash
-docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:latest \
+docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:0.2.0 \
   /usr/share/doc/cellaflow/LICENSE
 ```
 
@@ -355,7 +382,7 @@ SBOM tooling read:
 
 ```bash
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}' \
-  ghcr.io/cellaflow/cellaflow:latest
+  ghcr.io/cellaflow/cellaflow:0.2.0
 # BSL-1.1
 ```
 
