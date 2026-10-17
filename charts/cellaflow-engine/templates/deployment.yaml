@@ -58,6 +58,24 @@ spec:
               value: "0.0.0.0"
             - name: CELLAFLOW_DB_PATH
               value: "/data/cellaflow"
+            {{- if .Values.auth.existingSecret }}
+            - name: CELLAFLOW_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: token
+            {{- else if .Values.auth.token }}
+            - name: CELLAFLOW_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cellaflow-engine.fullname" . }}-auth
+                  key: token
+            {{- else if .Values.auth.allowUnauthenticated }}
+            - name: CELLAFLOW_ALLOW_UNAUTHENTICATED
+              value: "true"
+            {{- else }}
+            {{- fail "auth is required: set auth.existingSecret, auth.token, or auth.allowUnauthenticated=true. The engine will not start without one, because an unset token accepts every caller." }}
+            {{- end }}
           ports:
             - name: grpc
               containerPort: 50051

@@ -5,8 +5,26 @@ replicaCount: 1
 image:
   repository: ghcr.io/cellaflow/cellaflow
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  # Overrides the image tag whose default is the chart appVersion, so a chart
+  # version installs the engine version it was released with. "latest" moves on
+  # every merge to main, and with pullPolicy IfNotPresent a node keeps whichever
+  # copy it pulled first, so two pods could run different engines.
+  tag: ""
+
+# Authentication. The engine refuses to start unless one of these is set, because
+# an unset token makes the gRPC interceptor accept every caller and nothing in the
+# process can tell whether it is reachable.
+#
+# Prefer `existingSecret`. Setting `token` here puts the credential in your values
+# file and therefore in whatever stores it.
+auth:
+  # Name of a Secret with a `token` key.
+  existingSecret: ""
+  # Inline token. Rendered into a Secret owned by this chart.
+  token: ""
+  # Serve with no authentication at all. Only for a cluster where something else
+  # is doing the authenticating.
+  allowUnauthenticated: false
 
 imagePullSecrets: []
 nameOverride: ""

@@ -35,19 +35,33 @@ Deploy the **CellaFlow Engine** to your Kubernetes cluster in minutes. This char
 
 ## Quick Start
 
-### Install the chart
-
-From the root of this repository:
+### 1. Add the CellaFlow Helm repository
 
 ```bash
-helm install cellaflow-engine ./charts/cellaflow-engine
+helm repo add cellaflow https://cellaflow.github.io/charts
+helm repo update
 ```
 
-Or from within the `charts/cellaflow-engine` directory:
+### 2. Install the chart
+
+Authentication is required. The chart refuses to render without one of the three
+options below, because an unset token makes the engine accept every caller and
+nothing inside the process can tell whether it is reachable.
 
 ```bash
-helm install cellaflow-engine .
+# Recommended: a Secret you own, with a `token` key.
+kubectl create secret generic cellaflow-auth --from-literal=token="$(openssl rand -hex 32)"
+
+helm install cellaflow-engine cellaflow/cellaflow-engine \
+  --version 0.2.0 \
+  --set auth.existingSecret=cellaflow-auth
 ```
+
+| option | effect |
+|---|---|
+| `auth.existingSecret` | Read `CELLAFLOW_AUTH_TOKEN` from a Secret you manage. The chart never touches it. |
+| `auth.token` | Inline token. The chart renders a Secret from it, so the credential lives in your values file and wherever that is stored. |
+| `auth.allowUnauthenticated` | Serve with no authentication. Only where something else is doing the authenticating. |
 
 The engine will be running within ~30 seconds. Verify:
 
@@ -69,13 +83,13 @@ cellaflow-engine-xxxx-yyyy         2/2     Running   0          30s
 All configuration is done via `values.yaml` or `--set` flags. To see the full defaults:
 
 ```bash
-helm show values ./charts/cellaflow-engine
+helm show values oci://ghcr.io/cellaflow/charts/cellaflow-engine
 ```
 
 To use a custom values file:
 
 ```bash
-helm install cellaflow-engine ./charts/cellaflow-engine \
+helm install cellaflow-engine oci://ghcr.io/cellaflow/charts/cellaflow-engine \
   -f my-values.yaml
 ```
 
@@ -256,7 +270,8 @@ Starting from chart version `0.1.0`, the engine runs as a non-root user (UID `10
 ### Upgrade Command
 
 ```bash
-helm upgrade cellaflow-engine ./charts/cellaflow-engine \
+helm upgrade cellaflow-engine oci://ghcr.io/cellaflow/charts/cellaflow-engine \
+  --version <new-version> \
   -f my-values.yaml
 ```
 

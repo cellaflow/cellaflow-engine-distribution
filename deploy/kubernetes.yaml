@@ -1,3 +1,10 @@
+# The engine refuses to start without an auth token. Create the Secret first,
+# with a `token` key:
+#
+#   kubectl create secret generic cellaflow-auth \
+#     --from-literal=token="$(openssl rand -hex 32)"
+#
+# Clients send it as `authorization: Bearer <token>` or `x-api-key: <token>`.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -40,7 +47,9 @@ spec:
               mountPath: /data
       containers:
         - name: cellaflow-engine
-          image: ghcr.io/cellaflow/cellaflow:latest
+          # A fixed version: `latest` moves with every release, and with
+          # IfNotPresent each node keeps whichever copy it pulled first.
+          image: ghcr.io/cellaflow/cellaflow:0.2.0
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsNonRoot: true
@@ -54,6 +63,11 @@ spec:
               value: "info"
             - name: CELLAFLOW_SYNC_WRITES
               value: "true"
+            - name: CELLAFLOW_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cellaflow-auth
+                  key: token
           ports:
             - name: grpc
               containerPort: 50051
