@@ -53,7 +53,7 @@ nothing inside the process can tell whether it is reachable.
 kubectl create secret generic cellaflow-auth --from-literal=token="$(openssl rand -hex 32)"
 
 helm install cellaflow-engine cellaflow/cellaflow-engine \
-  --version 0.2.0 \
+  --version 0.3.0 \
   --set auth.existingSecret=cellaflow-auth
 ```
 
