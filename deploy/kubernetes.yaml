@@ -49,7 +49,7 @@ spec:
         - name: cellaflow-engine
           # A fixed version: `latest` moves with every release, and with
           # IfNotPresent each node keeps whichever copy it pulled first.
-          image: ghcr.io/cellaflow/cellaflow:0.2.0
+          image: ghcr.io/cellaflow/cellaflow:0.3.0
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsNonRoot: true

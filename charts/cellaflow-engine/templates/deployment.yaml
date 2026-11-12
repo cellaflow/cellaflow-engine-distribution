@@ -76,6 +76,28 @@ spec:
             {{- else }}
             {{- fail "auth is required: set auth.existingSecret, auth.token, or auth.allowUnauthenticated=true. The engine will not start without one, because an unset token accepts every caller." }}
             {{- end }}
+            {{- if $telemetryEnabled }}
+            # Points the engine at the otel-collector sidecar below. The engine
+            # exports nothing unless an endpoint is set, so without it the sidecar
+            # would be scheduled, reserve its CPU, and receive no data. Gated on
+            # the same condition as the sidecar so the two cannot disagree.
+            #
+            # Per signal, matching the pipelines in the sidecar's config: metrics
+            # always, traces only when a customer APM endpoint gives them a
+            # pipeline. The general OTEL_EXPORTER_OTLP_ENDPOINT would send traces
+            # to a sidecar with no traces pipeline, which rejects every batch,
+            # and the engine logs each rejection for the life of the pod.
+            #
+            # The signal-specific names rank above every general one, so an
+            # OTEL_EXPORTER_OTLP_ENDPOINT injected by the OpenTelemetry operator
+            # does not divert what the sidecar is configured to receive.
+            - name: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+              value: "http://localhost:4317"
+            {{- if $hasCustomerApm }}
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: "http://localhost:4317"
+            {{- end }}
+            {{- end }}
           ports:
             - name: grpc
               containerPort: 50051

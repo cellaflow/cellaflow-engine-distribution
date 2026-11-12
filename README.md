@@ -1,4 +1,4 @@
-# CellaFlow Engine
+# Cellaflow Engine
 
 [![Docker Image](https://img.shields.io/badge/ghcr.io-cellaflow%2Fcellaflow-blue?logo=docker)](https://github.com/orgs/cellaflow/packages/container/package/cellaflow)
 [![Platforms](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey)](#supported-architectures)
@@ -8,9 +8,9 @@
 [![npm SDK](https://img.shields.io/npm/v/@cellaflow/sdk?logo=npm&label=%40cellaflow%2Fsdk)](https://www.npmjs.com/package/@cellaflow/sdk)
 [![License](https://img.shields.io/badge/license-BSL--1.1-orange)](#license)
 
-Official Docker image for **CellaFlow Engine** — a systems-grade, stateful execution runtime designed for autonomous AI agents and complex distributed workflows. Built in Rust for extreme performance, memory safety, and sub-millisecond local commit latency.
+Official Docker image for **Cellaflow Engine** — a systems-grade, stateful execution runtime designed for autonomous AI agents and complex distributed workflows. Built in Rust for extreme performance, memory safety, and sub-millisecond local commit latency.
 
-CellaFlow manages state checkpoints using an immutable **Cognitive Graph**, provides **deterministic replay** for crash recovery, enforces **singleflight idempotency** across agent swarms, and guarantees strict execution semantics with **fencing tokens** and durable leases.
+Cellaflow manages state checkpoints using an immutable **Cognitive Graph**, provides **deterministic replay** for crash recovery, enforces **singleflight idempotency** across agent swarms, and guarantees strict execution semantics with **fencing tokens** and durable leases.
 
 ---
 
@@ -19,7 +19,7 @@ CellaFlow manages state checkpoints using an immutable **Cognitive Graph**, prov
 ### 1. Pull the Image
 
 ```bash
-docker pull ghcr.io/cellaflow/cellaflow:0.2.0
+docker pull ghcr.io/cellaflow/cellaflow:0.3.0
 ```
 
 ### 2. Run the Container
@@ -33,7 +33,7 @@ docker run -d \
   -p 9090:9090 \
   -v cellaflow-data:/data \
   -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
-  ghcr.io/cellaflow/cellaflow:0.2.0
+  ghcr.io/cellaflow/cellaflow:0.3.0
 ```
 
 For local development on a port nothing else can reach, you can opt out explicitly with `-e CELLAFLOW_ALLOW_UNAUTHENTICATED=true` in place of the token.
@@ -65,11 +65,14 @@ Every release is published under fixed and moving tags:
 
 | Tag | Moves? | Use it for |
 | :--- | :--- | :--- |
-| `0.2.0` | Never | Production. Pin this. |
-| `0.2`, `0` | To the latest patch or minor release | Picking up fixes deliberately |
+| `0.3.0` | Never | Production. Pin this. |
+| `0.3`, `0` | To the latest patch or minor release | Picking up fixes deliberately |
 | `latest` | With every release | Trying the engine out |
+| `edge` | With every change to the engine, between releases | Trying unreleased changes. Never production. |
 
 Pin a full version in anything long-lived: an image under a fixed tag is never rewritten, so you always know which build, and which licence terms, you are running.
+
+**`0.2.0` is the exception.** Until 0.3.0, later builds were published under `0.2.0` too, so that tag no longer names the 0.2.0 release. From 0.3.0 on, a version's tags are written once. Pin `0.3.0` or later.
 
 ---
 
@@ -84,7 +87,7 @@ Pin a full version in anything long-lived: an image under a fixed tag is never r
 
 ## Storage & Persistence
 
-CellaFlow uses **RocksDB** by default for high-throughput, low-latency state persistence.
+Cellaflow uses **RocksDB** by default for high-throughput, low-latency state persistence.
 
 * **Container Data Directory**: `/data/cellaflow` (configured via `CELLAFLOW_DB_PATH`).
 * **Volume Mount**: Mount a host path or Docker named volume to `/data`.
@@ -99,7 +102,7 @@ docker run -d \
   -p 9090:9090 \
   -v $(pwd)/cellaflow-data:/data \
   -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
-  ghcr.io/cellaflow/cellaflow:0.2.0
+  ghcr.io/cellaflow/cellaflow:0.3.0
 ```
 
 > **Important**: RocksDB requires single-process exclusive file locks. Do not attach multiple running engine containers simultaneously to the same storage path.
@@ -141,7 +144,7 @@ All settings can be customized via environment variables:
 # docker-compose.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:0.2.0
+    image: ghcr.io/cellaflow/cellaflow:0.3.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -167,7 +170,7 @@ volumes:
 # docker-compose.prod.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:0.2.0
+    image: ghcr.io/cellaflow/cellaflow:0.3.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -341,7 +344,7 @@ Images are built natively as multi-architecture container manifests:
 
 ## License
 
-CellaFlow Engine is licensed under the **Business Source License 1.1**
+Cellaflow Engine is licensed under the **Business Source License 1.1**
 (`BSL-1.1`). It is source-available rather than open source.
 
 **You may run it in production, free of charge, including on infrastructure you
@@ -349,7 +352,7 @@ rent from someone else.** Operating your own applications, workflows, or agents
 is permitted without restriction, and no licence key or registration is
 involved.
 
-The one thing the Additional Use Grant does not permit is offering CellaFlow
+The one thing the Additional Use Grant does not permit is offering Cellaflow
 Engine to third parties as a hosted, managed, or embedded service whose value
 derives substantially from its functionality. In short: run it for yourself
 freely, do not resell it as a service.
@@ -373,7 +376,7 @@ For alternative licensing arrangements, see
 with the artifact rather than living only in this repository:
 
 ```bash
-docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:0.2.0 \
+docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:0.3.0 \
   /usr/share/doc/cellaflow/LICENSE
 ```
 
@@ -382,7 +385,7 @@ SBOM tooling read:
 
 ```bash
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}' \
-  ghcr.io/cellaflow/cellaflow:0.2.0
+  ghcr.io/cellaflow/cellaflow:0.3.0
 # BSL-1.1
 ```
 
@@ -390,7 +393,7 @@ docker inspect --format '{{index .Config.Labels "org.opencontainers.image.licens
 
 Those builds were distributed without a stated licence, and the documentation at
 the time instructed readers to run them. To leave no doubt for anyone who
-obtained, ran, or redistributed one, **every CellaFlow Engine artifact published
+obtained, ran, or redistributed one, **every Cellaflow Engine artifact published
 on or before 2026-09-18 is additionally made available under the Apache License,
 Version 2.0**.
 
