@@ -53,7 +53,7 @@ nothing inside the process can tell whether it is reachable.
 kubectl create secret generic cellaflow-auth --from-literal=token="$(openssl rand -hex 32)"
 
 helm install cellaflow-engine cellaflow/cellaflow-engine \
-  --version 0.3.0 \
+  --version 0.4.0 \
   --set auth.existingSecret=cellaflow-auth
 ```
 
@@ -317,6 +317,8 @@ helm uninstall cellaflow-engine
 | `persistence.enabled` | `true` | Enable PersistentVolumeClaim for RocksDB state. |
 | `persistence.storageClass` | `""` | Storage class. Empty uses cluster default. |
 | `persistence.size` | `10Gi` | PVC size. |
+| `leases.defaultTtlMs` | `""` | TTL of a lease whose request asks for none (`CELLAFLOW_DEFAULT_LEASE_TTL_MS`). Empty takes the engine's default: 20000, or `maxLifetimeMs` if that is lower. Set, it must be at least 4 and at most the maximum lease lifetime, or the engine refuses to start; under 1000 it warns, since a client may not renew so short a lease in time. A value that is not a whole number of milliseconds fails the render. |
+| `leases.maxLifetimeMs` | `""` | Ceiling on a single lease, however often it is renewed (`CELLAFLOW_MAX_LEASE_LIFETIME_MS`). Empty takes the engine's default, 3600000. Set, it must be a whole number of at least 4, or the render fails. Also caps requested TTLs and renewals. Safe to raise, unsafe to lower. |
 | `telemetry.optOut` | `false` | Set `true` to disable fleet telemetry routing. |
 | `telemetry.customerApm.endpoint` | `""` | OTLP/gRPC endpoint for your APM. Empty disables customer pipeline. |
 | `telemetry.customerApm.apiKey` | `""` | API key inline. Prefer `apiKeySecretRef` in production. |
