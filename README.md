@@ -19,7 +19,7 @@ Cellaflow manages state checkpoints using an immutable **Cognitive Graph**, prov
 ### 1. Pull the Image
 
 ```bash
-docker pull ghcr.io/cellaflow/cellaflow:0.3.0
+docker pull ghcr.io/cellaflow/cellaflow:0.4.0
 ```
 
 ### 2. Run the Container
@@ -33,7 +33,7 @@ docker run -d \
   -p 9090:9090 \
   -v cellaflow-data:/data \
   -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
-  ghcr.io/cellaflow/cellaflow:0.3.0
+  ghcr.io/cellaflow/cellaflow:0.4.0
 ```
 
 For local development on a port nothing else can reach, you can opt out explicitly with `-e CELLAFLOW_ALLOW_UNAUTHENTICATED=true` in place of the token.
@@ -65,8 +65,8 @@ Every release is published under fixed and moving tags:
 
 | Tag | Moves? | Use it for |
 | :--- | :--- | :--- |
-| `0.3.0` | Never | Production. Pin this. |
-| `0.3`, `0` | To the latest patch or minor release | Picking up fixes deliberately |
+| `0.4.0` | Never | Production. Pin this. |
+| `0.4`, `0` | To the latest patch or minor release | Picking up fixes deliberately |
 | `latest` | With every release | Trying the engine out |
 | `edge` | With every change to the engine, between releases | Trying unreleased changes. Never production. |
 
@@ -102,7 +102,7 @@ docker run -d \
   -p 9090:9090 \
   -v $(pwd)/cellaflow-data:/data \
   -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
-  ghcr.io/cellaflow/cellaflow:0.3.0
+  ghcr.io/cellaflow/cellaflow:0.4.0
 ```
 
 > **Important**: RocksDB requires single-process exclusive file locks. Do not attach multiple running engine containers simultaneously to the same storage path.
@@ -128,7 +128,8 @@ All settings can be customized via environment variables:
 | `CELLAFLOW_SYNC_WRITES` | `true` | `true` | When `true`, commits are `fsync`'d before returning (guarantees durability across host power failures). Set `false` for higher throughput if relying on OS cache. |
 | `CELLAFLOW_SESSION_IDLE_TIMEOUT_SECS` | `1800` (30m) | `1800` (30m) | Idle duration before an in-memory session actor is safely evicted from RAM. |
 | `CELLAFLOW_ACTOR_SEND_TIMEOUT_MS` | `5000` (5s) | `5000` (5s) | Mailbox backpressure timeout before returning `RESOURCE_EXHAUSTED`. |
-| `CELLAFLOW_MAX_LEASE_LIFETIME_MS` | `3600000` (1h) | `3600000` (1h) | Maximum ceiling on tool execution lease lifetime. |
+| `CELLAFLOW_MAX_LEASE_LIFETIME_MS` | `3600000` (1h) | `3600000` (1h) | Maximum ceiling on tool execution lease lifetime. A requested TTL or renewal above it is granted the ceiling. |
+| `CELLAFLOW_DEFAULT_LEASE_TTL_MS` | `20000` (20s), or the ceiling if lower | `20000` (20s), or the ceiling if lower | TTL of a lease whose request asks for none: how long another caller waits to take over a holder that died. If set, it must be at least `4` and at most `CELLAFLOW_MAX_LEASE_LIFETIME_MS`, or the engine refuses to start. |
 | `CELLAFLOW_OTLP_ENDPOINT` | `http://localhost:4317` | `http://localhost:4317` | OpenTelemetry OTLP/gRPC collector endpoint for metrics and traces. |
 | `CELLAFLOW_STORAGE_METRICS_INTERVAL_SECS` | `15` | `15` | Interval in seconds between internal storage telemetry snapshots. |
 
@@ -144,7 +145,7 @@ All settings can be customized via environment variables:
 # docker-compose.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:0.3.0
+    image: ghcr.io/cellaflow/cellaflow:0.4.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -170,7 +171,7 @@ volumes:
 # docker-compose.prod.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:0.3.0
+    image: ghcr.io/cellaflow/cellaflow:0.4.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -376,7 +377,7 @@ For alternative licensing arrangements, see
 with the artifact rather than living only in this repository:
 
 ```bash
-docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:0.3.0 \
+docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:0.4.0 \
   /usr/share/doc/cellaflow/LICENSE
 ```
 
@@ -385,7 +386,7 @@ SBOM tooling read:
 
 ```bash
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}' \
-  ghcr.io/cellaflow/cellaflow:0.3.0
+  ghcr.io/cellaflow/cellaflow:0.4.0
 # BSL-1.1
 ```
 
