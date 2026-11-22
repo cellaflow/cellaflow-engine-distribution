@@ -26,6 +26,20 @@ auth:
   # is doing the authenticating.
   allowUnauthenticated: false
 
+# Lease settings. Empty leaves the engine's own default.
+leases:
+  # TTL of a lease whose request asks for none (CELLAFLOW_DEFAULT_LEASE_TTL_MS):
+  # how long another caller waits to take over a holder that died without
+  # asking for a TTL of its own. The engine's default is 20000, or
+  # maxLifetimeMs if that is lower. Set, it must be at least 4 and at most
+  # maxLifetimeMs, or the engine refuses to start.
+  defaultTtlMs: ""
+  # Ceiling on a single lease, however often it is renewed
+  # (CELLAFLOW_MAX_LEASE_LIFETIME_MS). The engine's default is 3600000. Safe to
+  # raise, unsafe to lower: reclaiming a holder that is merely slow lets a
+  # second worker repeat a side effect the first may already have performed.
+  maxLifetimeMs: ""
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

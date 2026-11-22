@@ -58,6 +58,34 @@ spec:
               value: "0.0.0.0"
             - name: CELLAFLOW_DB_PATH
               value: "/data/cellaflow"
+            {{- /* A release made with a chart that had no leases block has none. */}}
+            {{- $leases := .Values.leases | default dict }}
+            {{- range $key, $var := dict "defaultTtlMs" "CELLAFLOW_DEFAULT_LEASE_TTL_MS" "maxLifetimeMs" "CELLAFLOW_MAX_LEASE_LIFETIME_MS" }}
+            {{- $value := get $leases $key }}
+            {{- if and (not (kindIs "invalid" $value)) (ne (toString $value) "") }}
+            {{- /* Values files hold numbers as floats, which print in scientific
+                   notation from 1e6 up; int64 prints them whole. Anything that
+                   is then not a whole number of milliseconds is refused here,
+                   naming the key: the engine would fall back to its default,
+                   silently. */}}
+            {{- $text := ternary (int64 $value | toString) (toString $value) (kindIs "float64" $value) }}
+            {{- $fraction := and (kindIs "float64" $value) (ne (toString $value) (toString (float64 (int64 $value)))) }}
+            {{- /* A string too long for int64 wraps or reads as 0, so it must
+                   round-trip to be a whole number the engine can use. */}}
+            {{- $fits := eq (toString (int64 $text)) $text }}
+            {{- if or $fraction (not (regexMatch "^[0-9]+$" $text)) (not $fits) }}
+            {{- fail (printf "leases.%s must be a whole number of milliseconds, got %v" $key $value) }}
+            {{- end }}
+            {{- /* The engine reads a ceiling of 0 as unset, so 0 would mean its
+                   default rather than "no ceiling"; one under 4 cannot hold a
+                   lease. */}}
+            {{- if and (eq $key "maxLifetimeMs") (lt (int64 $text) 4) }}
+            {{- fail (printf "leases.maxLifetimeMs must be at least 4, got %v: leave it empty for the engine's default" $value) }}
+            {{- end }}
+            - name: {{ $var }}
+              value: {{ $text | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.auth.existingSecret }}
             - name: CELLAFLOW_AUTH_TOKEN
               valueFrom:
