@@ -130,7 +130,7 @@ All settings can be customized via environment variables:
 | `CELLAFLOW_ACTOR_SEND_TIMEOUT_MS` | `5000` (5s) | `5000` (5s) | Mailbox backpressure timeout before returning `RESOURCE_EXHAUSTED`. |
 | `CELLAFLOW_MAX_LEASE_LIFETIME_MS` | `3600000` (1h) | `3600000` (1h) | Maximum ceiling on tool execution lease lifetime. A requested TTL or renewal above it is granted the ceiling. |
 | `CELLAFLOW_DEFAULT_LEASE_TTL_MS` | `20000` (20s), or the ceiling if lower | `20000` (20s), or the ceiling if lower | TTL of a lease whose request asks for none: how long another caller waits to take over a holder that died. If set, it must be at least `4` and at most `CELLAFLOW_MAX_LEASE_LIFETIME_MS`, or the engine refuses to start. |
-| `CELLAFLOW_OTLP_ENDPOINT` | `http://localhost:4317` | `http://localhost:4317` | OpenTelemetry OTLP/gRPC collector endpoint for metrics and traces. |
+| `CELLAFLOW_OTLP_ENDPOINT` | *None* (no export) | *None* (no export) | OpenTelemetry OTLP/gRPC collector endpoint for metrics and traces. Telemetry is exported only when an endpoint is set. The standard `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` and `OTEL_EXPORTER_OTLP_ENDPOINT` are read first, in that order, and this variable is the last fallback. `OTEL_SDK_DISABLED=true` turns export off. |
 | `CELLAFLOW_STORAGE_METRICS_INTERVAL_SECS` | `15` | `15` | Interval in seconds between internal storage telemetry snapshots. |
 
 *Note: Common variables also accept unprefixed aliases (e.g. `HOST`, `PORT`, `DB_PATH`, `AUTH_TOKEN`, `API_KEY`, `RUST_LOG`).*
