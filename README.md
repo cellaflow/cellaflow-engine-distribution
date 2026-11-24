@@ -19,7 +19,7 @@ Cellaflow manages state checkpoints using an immutable **Cognitive Graph**, prov
 ### 1. Pull the Image
 
 ```bash
-docker pull ghcr.io/cellaflow/cellaflow:0.4.0
+docker pull ghcr.io/cellaflow/cellaflow:0.5.0
 ```
 
 ### 2. Run the Container
@@ -33,7 +33,7 @@ docker run -d \
   -p 9090:9090 \
   -v cellaflow-data:/data \
   -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
-  ghcr.io/cellaflow/cellaflow:0.4.0
+  ghcr.io/cellaflow/cellaflow:0.5.0
 ```
 
 For local development on a port nothing else can reach, you can opt out explicitly with `-e CELLAFLOW_ALLOW_UNAUTHENTICATED=true` in place of the token.
@@ -65,8 +65,8 @@ Every release is published under fixed and moving tags:
 
 | Tag | Moves? | Use it for |
 | :--- | :--- | :--- |
-| `0.4.0` | Never | Production. Pin this. |
-| `0.4`, `0` | To the latest patch or minor release | Picking up fixes deliberately |
+| `0.5.0` | Never | Production. Pin this. |
+| `0.5`, `0` | To the latest patch or minor release | Picking up fixes deliberately |
 | `latest` | With every release | Trying the engine out |
 | `edge` | With every change to the engine, between releases | Trying unreleased changes. Never production. |
 
@@ -102,7 +102,7 @@ docker run -d \
   -p 9090:9090 \
   -v $(pwd)/cellaflow-data:/data \
   -e CELLAFLOW_AUTH_TOKEN="$(openssl rand -hex 32)" \
-  ghcr.io/cellaflow/cellaflow:0.4.0
+  ghcr.io/cellaflow/cellaflow:0.5.0
 ```
 
 > **Important**: RocksDB requires single-process exclusive file locks. Do not attach multiple running engine containers simultaneously to the same storage path.
@@ -145,7 +145,7 @@ All settings can be customized via environment variables:
 # docker-compose.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:0.4.0
+    image: ghcr.io/cellaflow/cellaflow:0.5.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -171,7 +171,7 @@ volumes:
 # docker-compose.prod.yml
 services:
   cellaflow:
-    image: ghcr.io/cellaflow/cellaflow:0.4.0
+    image: ghcr.io/cellaflow/cellaflow:0.5.0
     container_name: cellaflow
     restart: unless-stopped
     ports:
@@ -377,7 +377,7 @@ For alternative licensing arrangements, see
 with the artifact rather than living only in this repository:
 
 ```bash
-docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:0.4.0 \
+docker run --rm --entrypoint cat ghcr.io/cellaflow/cellaflow:0.5.0 \
   /usr/share/doc/cellaflow/LICENSE
 ```
 
@@ -386,7 +386,7 @@ SBOM tooling read:
 
 ```bash
 docker inspect --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}' \
-  ghcr.io/cellaflow/cellaflow:0.4.0
+  ghcr.io/cellaflow/cellaflow:0.5.0
 # BSL-1.1
 ```
 
