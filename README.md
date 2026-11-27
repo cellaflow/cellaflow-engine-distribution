@@ -38,6 +38,8 @@ docker run -d \
 
 For local development on a port nothing else can reach, you can opt out explicitly with `-e CELLAFLOW_ALLOW_UNAUTHENTICATED=true` in place of the token.
 
+The `-v cellaflow-data:/data` volume is what keeps the engine's state when the container is replaced. Read [Storage & Persistence](#storage--persistence) before running it anywhere other than your machine.
+
 ### 3. Verify Health & Readiness
 
 ```bash
@@ -91,6 +93,25 @@ Cellaflow uses **RocksDB** by default for high-throughput, low-latency state per
 
 * **Container Data Directory**: `/data/cellaflow` (configured via `CELLAFLOW_DB_PATH`).
 * **Volume Mount**: Mount a host path or Docker named volume to `/data`.
+
+> **Warning: without a persistent volume at `/data`, the engine's state is lost when its container is replaced.**
+>
+> Everything the engine knows lives there:
+> * sessions and their step history;
+> * the idempotency records and leases that stop a tool call running twice;
+> * pending timers.
+>
+> Restarting the same container keeps them. A new container without the same volume starts empty, and then:
+> * a retried tool call runs again: a second charge, a second email;
+> * a resumed session is not found;
+> * a pending timer never fires.
+>
+> That happens wherever the container's filesystem does not outlive the container:
+> * `docker run` without `-v`;
+> * `docker rm` followed by a new `docker run`;
+> * managed container platforms such as AWS ECS on Fargate, Google Cloud Run, Render or Railway, unless persistent storage is attached.
+>
+> On those, attach a persistent disk at `/data` and run one engine per disk. RocksDB expects a local disk, so network file systems such as NFS or EFS are not recommended. On Kubernetes, the Helm chart and `deploy/kubernetes.yaml` below mount a PersistentVolumeClaim by default.
 * **Security & Non-Root User**: The container runs under non-root user `appuser` (`UID: 10001`, `GID: 10001`). If you mount a host directory, ensure it has write permissions for UID `10001`:
 
 ```bash
