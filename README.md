@@ -109,7 +109,7 @@ Cellaflow uses **RocksDB** by default for high-throughput, low-latency state per
 > That happens wherever the container's filesystem does not outlive the container:
 > * `docker run` without `-v`;
 > * `docker rm` followed by a new `docker run`;
-> * managed container platforms such as AWS ECS on Fargate, Google Cloud Run, Render or Railway, unless persistent storage is attached.
+> * container platforms where you run the image yourself, such as AWS ECS on Fargate, Google Cloud Run, Render or Railway, unless persistent storage is attached.
 >
 > On those, attach a persistent disk at `/data` and run one engine per disk. RocksDB expects a local disk, so network file systems such as NFS or EFS are not recommended. On Kubernetes, the Helm chart and `deploy/kubernetes.yaml` below mount a PersistentVolumeClaim by default.
 * **Security & Non-Root User**: The container runs under non-root user `appuser` (`UID: 10001`, `GID: 10001`). If you mount a host directory, ensure it has write permissions for UID `10001`:
